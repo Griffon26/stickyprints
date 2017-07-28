@@ -8,6 +8,10 @@ import tempfile
 import xml.etree.ElementTree as ET
 import zipfile
 
+from tkinter import *
+from tkinter.filedialog import askopenfilename
+from tkinter.messagebox import showinfo
+
 WORD_NAMESPACE = '{http://schemas.openxmlformats.org/wordprocessingml/2006/main}'
 BODY = WORD_NAMESPACE + 'body'
 TR = WORD_NAMESPACE + 'tr'
@@ -90,12 +94,78 @@ def create_stickies_from_template(template_filename, tasks, stickies_filename):
 
         make_zipfile_from_dir(tempdir, stickies_filename)
 
-def main():
+def generate_stickies(template_filename, tasks_filename, stickies_filename):
     tasks = read_tasks_from_excel('tasks.xlsx')
     if tasks:
         create_stickies_from_template('template.docx', tasks, 'stickies.docx')
     else:
         print('No tasks, so no stickies')
 
+def get_dirname_from_filename(filename):
+    return '.' if not filename else os.path.dirname(filename)
+
+class MyFrame(Frame):
+    def __init__(self):
+        Frame.__init__(self)
+        self.master.resizable(True, False)
+        self.master.title("Stickyprints v0.1")
+        self.master.columnconfigure(0, weight=1)
+        self.columnconfigure(1, weight=1)
+        self.columnconfigure(0, pad=10)
+        self.columnconfigure(1, pad=10)
+        self.columnconfigure(2, pad=10)
+        self.rowconfigure(0, pad=5)
+        self.rowconfigure(1, pad=5)
+        self.rowconfigure(2, pad=5)
+        self.grid(sticky='nsew')
+
+        self.template_label = Label(self, text = 'Template:')
+        self.template_entry = Entry(self)
+        self.template_button = Button(self, text = 'Change...', command = self.on_change_template_button_clicked)
+        self.tasklist_label = Label(self, text = 'Task list (xlsx):')
+        self.tasklist_entry = Entry(self)
+        self.tasklist_button = Button(self, text = 'Change...', command = self.on_change_tasks_button_clicked)
+        self.last_used_stickies_filename = None
+        self.generate_button = Button(self, text = 'Generate stickies...', command = self.on_generate_stickies_button_clicked)
+        self.quit_button = Button(self, text = 'Quit', command = self.on_quit_button_clicked)
+
+        self.template_label.grid(row = 0, column = 0)
+        self.template_entry.grid(row = 0, column = 1, sticky='ew')
+        self.template_button.grid(row = 0, column = 2)
+        self.tasklist_label.grid(row = 1, column = 0)
+        self.tasklist_entry.grid(row = 1, column = 1, sticky='ew')
+        self.tasklist_button.grid(row = 1, column = 2)
+        self.generate_button.grid(row = 2, column = 1)
+        self.quit_button.grid(row = 2, column = 2)
+
+    def on_change_template_button_clicked(self):
+        filename = askopenfilename(initialdir=get_dirname_from_filename(self.template_entry.get()),
+                                   filetypes=[('Template file', '*.docx')])
+        if filename:
+            self.template_entry.delete(0, END)
+            self.template_entry.insert(0, filename)
+
+    def on_change_tasks_button_clicked(self):
+        filename = askopenfilename(initialdir=get_dirname_from_filename(self.tasklist_entry.get()),
+                                   filetypes=[('Tasks file', '*.xlsx')])
+        if filename:
+            self.tasklist_entry.delete(0, END)
+            self.tasklist_entry.insert(0, filename)
+
+    def on_generate_stickies_button_clicked(self):
+        filename = askopenfilename(initialdir=get_dirname_from_filename(self.last_used_stickies_filename),
+                                   filetypes=[('Stickies file', '*.docx')])
+        if filename:
+            self.last_used_stickies_filename = filename
+            generate_stickies(self.template_entry.get(),
+                              self.tasklist_entry.get(),
+                              filename)
+            showinfo("Stickies generated",
+                     "The stickies were generated successfully.")
+
+    def on_quit_button_clicked(self):
+        self.master.destroy()
+
+
 if __name__ == '__main__':
-    main()
+    MyFrame().mainloop()
