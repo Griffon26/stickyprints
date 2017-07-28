@@ -11,7 +11,7 @@ import zipfile
 
 from tkinter import *
 from tkinter.filedialog import askopenfilename
-from tkinter.messagebox import showerror, showinfo
+from tkinter.messagebox import showerror
 
 ########################################################################
 #
@@ -89,7 +89,6 @@ def create_stickies_from_template(template_filename, tasks, stickies_filename):
 
         # In each table remove all existing cells and add a copy of the first cell
         template_table_content = list(tree.find('.//%s' % TBL))
-        print(template_table_content)
 
         tasks.reverse()
         for table in tree.iter(TBL):
@@ -136,6 +135,7 @@ class MyFrame(Frame):
         self.rowconfigure(0, pad=5)
         self.rowconfigure(1, pad=5)
         self.rowconfigure(2, pad=5)
+        self.rowconfigure(3, pad=5)
         self.grid(sticky='nsew')
 
         self.template_label = Label(self, text = 'Template:')
@@ -146,6 +146,7 @@ class MyFrame(Frame):
         self.tasklist_button = Button(self, text = 'Change...', command = self.on_change_tasks_button_clicked)
         self.last_used_stickies_filename = None
         self.generate_button = Button(self, text = 'Generate stickies...', command = self.on_generate_stickies_button_clicked)
+        self.status_label = Label(self)
         self.quit_button = Button(self, text = 'Quit', command = self.on_quit_button_clicked)
 
         self.template_label.grid(row = 0, column = 0)
@@ -155,7 +156,8 @@ class MyFrame(Frame):
         self.tasklist_entry.grid(row = 1, column = 1, sticky='ew')
         self.tasklist_button.grid(row = 1, column = 2)
         self.generate_button.grid(row = 2, column = 1)
-        self.quit_button.grid(row = 2, column = 2)
+        self.status_label.grid(row = 3, column = 1)
+        self.quit_button.grid(row = 3, column = 2)
 
         self.config = configparser.ConfigParser()
         self.load_filenames_from_config()
@@ -206,17 +208,24 @@ class MyFrame(Frame):
             showerror('Error', 'The specified tasklist file does not exist. Please select a valid tasklist file.')
             return
 
-        self.save_filenames_to_config()
+        self.status_label.config(text = 'Generating...')
 
-        filename = askopenfilename(initialdir=get_dirname_from_filename(self.last_used_stickies_filename),
-                                   filetypes=[('Stickies file', '*.docx')])
-        if filename:
-            self.last_used_stickies_filename = filename
-            generate_stickies(self.template_entry.get(),
-                              self.tasklist_entry.get(),
-                              filename)
-            showinfo("Stickies generated",
-                     "The stickies were generated successfully.")
+        try:
+            self.save_filenames_to_config()
+
+            filename = askopenfilename(initialdir=get_dirname_from_filename(self.last_used_stickies_filename),
+                                       filetypes=[('Stickies file', '*.docx')])
+            if filename:
+                self.last_used_stickies_filename = filename
+                generate_stickies(self.template_entry.get(),
+                                  self.tasklist_entry.get(),
+                                  filename)
+                self.status_label.config(text = 'The stickies were generated successfully.')
+            else:
+                self.status_label.config(text = 'Cancelled')
+        except Exception as e:
+            self.status_label.config(text = 'An exception occurred during generation: %s' % e)
+            raise
 
     def on_quit_button_clicked(self):
         self.master.destroy()
