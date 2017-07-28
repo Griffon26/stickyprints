@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+from configparser import ConfigParser
 import copy
 import openpyxl
 import os
@@ -10,7 +11,13 @@ import zipfile
 
 from tkinter import *
 from tkinter.filedialog import askopenfilename
-from tkinter.messagebox import showinfo
+from tkinter.messagebox import showerror, showinfo
+
+########################################################################
+#
+#  Sticky processing code
+#
+########################################################################
 
 WORD_NAMESPACE = '{http://schemas.openxmlformats.org/wordprocessingml/2006/main}'
 BODY = WORD_NAMESPACE + 'body'
@@ -101,13 +108,23 @@ def generate_stickies(template_filename, tasks_filename, stickies_filename):
     else:
         print('No tasks, so no stickies')
 
+########################################################################
+#
+#  User interface code
+#
+########################################################################
+
 def get_dirname_from_filename(filename):
     return '.' if not filename else os.path.dirname(filename)
+
+def get_settings_file_path():
+    return os.path.expanduser(os.path.join('~', '.stickyprints.conf'))
 
 class MyFrame(Frame):
     def __init__(self):
         Frame.__init__(self)
         self.master.resizable(True, False)
+        self.master.minsize(800, 0)
         self.master.title("Stickyprints v0.1")
         self.master.columnconfigure(0, weight=1)
         self.columnconfigure(1, weight=1)
@@ -138,12 +155,34 @@ class MyFrame(Frame):
         self.generate_button.grid(row = 2, column = 1)
         self.quit_button.grid(row = 2, column = 2)
 
+        self.config = ConfigParser()
+        self.load_filenames_from_config()
+
+    def load_filenames_from_config(self):
+        self.config.read(get_settings_file_path())
+
+        template_filename = self.config.get('Settings', 'template_file', fallback='')
+        self.template_entry.delete(0, END)
+        self.template_entry.insert(0, template_filename)
+
+        tasklist_filename = self.config.get('Settings', 'tasklist_file', fallback='')
+        self.tasklist_entry.delete(0, END)
+        self.tasklist_entry.insert(0, tasklist_filename)
+
+    def save_filenames_to_config(self):
+        self.config.add_section('Settings')
+        self.config.set('Settings', 'template_file', self.template_entry.get())
+        self.config.set('Settings', 'tasklist_file', self.tasklist_entry.get())
+        with open(get_settings_file_path(), 'w') as configfile:
+            self.config.write(configfile)
+
     def on_change_template_button_clicked(self):
         filename = askopenfilename(initialdir=get_dirname_from_filename(self.template_entry.get()),
                                    filetypes=[('Template file', '*.docx')])
         if filename:
             self.template_entry.delete(0, END)
             self.template_entry.insert(0, filename)
+            self.save_filenames_to_config()
 
     def on_change_tasks_button_clicked(self):
         filename = askopenfilename(initialdir=get_dirname_from_filename(self.tasklist_entry.get()),
@@ -151,8 +190,19 @@ class MyFrame(Frame):
         if filename:
             self.tasklist_entry.delete(0, END)
             self.tasklist_entry.insert(0, filename)
+            self.save_filenames_to_config()
 
     def on_generate_stickies_button_clicked(self):
+        if not os.path.exists(self.template_entry.get()):
+            showerror('Error', 'The specified template file does not exist. Please select a valid template file.')
+            return
+
+        if not os.path.exists(self.tasklist_entry.get()):
+            showerror('Error', 'The specified tasklist file does not exist. Please select a valid tasklist file.')
+            return
+
+        self.save_filenames_to_config()
+
         filename = askopenfilename(initialdir=get_dirname_from_filename(self.last_used_stickies_filename),
                                    filetypes=[('Stickies file', '*.docx')])
         if filename:
@@ -165,7 +215,6 @@ class MyFrame(Frame):
 
     def on_quit_button_clicked(self):
         self.master.destroy()
-
 
 if __name__ == '__main__':
     MyFrame().mainloop()
