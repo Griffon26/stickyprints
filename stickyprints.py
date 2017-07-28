@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from configparser import ConfigParser
+import configparser
 import copy
 import openpyxl
 import os
@@ -155,7 +155,7 @@ class MyFrame(Frame):
         self.generate_button.grid(row = 2, column = 1)
         self.quit_button.grid(row = 2, column = 2)
 
-        self.config = ConfigParser()
+        self.config = configparser.ConfigParser()
         self.load_filenames_from_config()
 
     def load_filenames_from_config(self):
@@ -170,7 +170,10 @@ class MyFrame(Frame):
         self.tasklist_entry.insert(0, tasklist_filename)
 
     def save_filenames_to_config(self):
-        self.config.add_section('Settings')
+        try:
+            self.config.add_section('Settings')
+        except configparser.DuplicateSectionError:
+            pass
         self.config.set('Settings', 'template_file', self.template_entry.get())
         self.config.set('Settings', 'tasklist_file', self.tasklist_entry.get())
         with open(get_settings_file_path(), 'w') as configfile:
