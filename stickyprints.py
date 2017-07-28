@@ -21,8 +21,7 @@ from tkinter.messagebox import showerror, showinfo
 
 WORD_NAMESPACE = '{http://schemas.openxmlformats.org/wordprocessingml/2006/main}'
 BODY = WORD_NAMESPACE + 'body'
-TR = WORD_NAMESPACE + 'tr'
-TC = WORD_NAMESPACE + 'tc'
+TBL = WORD_NAMESPACE + 'tbl'
 TBLBORDERS = WORD_NAMESPACE + 'tblBorders'
 #TRBORDERS = WORD_NAMESPACE + 'trBorders'
 TCBORDERS = WORD_NAMESPACE + 'tcBorders'
@@ -52,11 +51,14 @@ def make_zipfile_from_dir(source_dir, output_filename):
                     arcname = os.path.join(os.path.relpath(root, relroot), filename)
                     zf.write(filepath, arcname)
 
-def replace_placeholders_with_task_data(cell, task):
-        stickytext = ET.tostring(cell, encoding='unicode')
+def replace_placeholders_with_task_data_in_element(element, task):
+        stickytext = ET.tostring(element, encoding='unicode')
         for key, val in task.items():
             stickytext = re.sub('&lt;%s&gt;' % key, val, stickytext, flags = re.IGNORECASE)
         return ET.fromstring(stickytext)
+
+def replace_placeholders_with_task_data(elements, task):
+    return [replace_placeholders_with_task_data_in_element(el, task) for el in elements]
 
 def remove_all_table_borders(element):
     for borders in element.findall('.//%s' % TBLBORDERS):
@@ -86,16 +88,16 @@ def create_stickies_from_template(template_filename, tasks, stickies_filename):
             body.extend(page)
 
         # In each table remove all existing cells and add a copy of the first cell
-        template_cell = tree.find('.//%s' % TC)
+        template_table_content = list(tree.find('.//%s' % TBL))
+        print(template_table_content)
 
         tasks.reverse()
-        for row in tree.iter(TR):
-            for cell in row.iter(TC):
-                row.remove(cell)
+        for table in tree.iter(TBL):
+            table.clear()
 
             if tasks:
-                taskcell = replace_placeholders_with_task_data(template_cell, tasks.pop())
-                row.append(taskcell)
+                task_table_content = replace_placeholders_with_task_data(template_table_content, tasks.pop())
+                table.extend(task_table_content)
 
         ET.ElementTree(tree).write(docpath)
 
