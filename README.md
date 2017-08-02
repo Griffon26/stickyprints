@@ -51,4 +51,17 @@ otherwise your stickies may get stuck inside your printer.
 Put the pages with stickies in the appropriate printer tray with the sticky
 side towards the printer. Now you can print the generated stickies.docx file.
 
+## Installation
+
+This program requires [openpyxl](https://pypi.python.org/pypi/openpyxl).
+
+If you want this script to be runnable from a central location without requiring
+users to install openpyxl, then do something like this:
+
+1. Download a release of openpyxl & extract it to a temporary location
+2. Move the openpyxl subdirectory that it contains to the directory that
+   contains stickyprints.py
+3. Remove what remains of openpyxl in the temporary location
+
+Now you should be able to run stickyprints.py without installing openpyxl
 
