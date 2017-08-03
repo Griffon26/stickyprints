@@ -10,7 +10,7 @@ import xml.etree.ElementTree as ET
 import zipfile
 
 from tkinter import *
-from tkinter.filedialog import askopenfilename
+from tkinter.filedialog import askopenfilename, asksaveasfilename
 from tkinter.messagebox import showerror
 
 ########################################################################
@@ -29,8 +29,9 @@ TCBORDERS = WORD_NAMESPACE + 'tcBorders'
 def read_tasks_from_excel(excel_filename):
     tasks = []
     wb = openpyxl.load_workbook(excel_filename)
-    header = [str(cell.value) for cell in wb.worksheets[0].rows[0]]
-    for datarow in wb.worksheets[0].rows[1:]:
+    rows = tuple(wb.worksheets[0].rows)
+    header = [str(cell.value) for cell in rows[0]]
+    for datarow in rows[1:]:
         data = [str(cell.value) for cell in datarow]
         task = dict(zip(header, data))
         tasks.append(task)
@@ -103,9 +104,9 @@ def create_stickies_from_template(template_filename, tasks, stickies_filename):
         make_zipfile_from_dir(tempdir, stickies_filename)
 
 def generate_stickies(template_filename, tasks_filename, stickies_filename):
-    tasks = read_tasks_from_excel('tasks.xlsx')
+    tasks = read_tasks_from_excel(tasks_filename)
     if tasks:
-        create_stickies_from_template('template.docx', tasks, 'stickies.docx')
+        create_stickies_from_template(template_filename, tasks, stickies_filename)
     else:
         print('No tasks, so no stickies')
 
@@ -213,8 +214,8 @@ class MyFrame(Frame):
         try:
             self.save_filenames_to_config()
 
-            filename = askopenfilename(initialdir=get_dirname_from_filename(self.last_used_stickies_filename),
-                                       filetypes=[('Stickies file', '*.docx')])
+            filename = asksaveasfilename(initialdir=get_dirname_from_filename(self.last_used_stickies_filename),
+                                         filetypes=[('Stickies file', '*.docx')])
             if filename:
                 self.last_used_stickies_filename = filename
                 generate_stickies(self.template_entry.get(),
