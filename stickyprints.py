@@ -25,6 +25,8 @@ TBL = '{%s}tbl' % WORD_NAMESPACE
 TBLBORDERS = '{%s}tblBorders' % WORD_NAMESPACE
 #TRBORDERS = '{%s}trBorders' % WORD_NAMESPACE
 TCBORDERS = '{%s}tcBorders' % WORD_NAMESPACE
+BOOKMARKSTART = '{%s}bookmarkStart' % WORD_NAMESPACE
+BOOKMARKEND = '{%s}bookmarkEnd' % WORD_NAMESPACE
 
 def read_tasks_from_excel(excel_filename):
     tasks = []
@@ -61,6 +63,78 @@ def replace_placeholders_with_task_data_in_element(element, task):
 def replace_placeholders_with_task_data(elements, task):
     return [replace_placeholders_with_task_data_in_element(el, task) for el in elements]
 
+# Find the last '<' without a '>', but only if there is no pair of '<>' after it
+def find_last_partial_placeholder(element):
+    prefix_elem = None
+
+    for elem in element.iter():
+        if elem.text:
+            lessthan = elem.text.rfind('<')
+            if lessthan != -1:
+                prefix_elem = None
+                if elem.text.find('>', lessthan) == -1:
+                    prefix_elem = elem
+
+    return prefix_elem
+
+# Find the first '>', but only if it has no matching '<' and if there is no pair of '<>' before it
+def find_first_partial_placeholder(element):
+    suffix_elem = None
+
+    for elem in element.iter():
+        if elem.text:
+            greaterthan = elem.text.find('>')
+            if greaterthan != -1:
+                if elem.text.rfind('<', 0, greaterthan) == -1:
+                    suffix_elem = elem
+                break
+
+    return suffix_elem
+
+# This function looks for a '<' in one of the children before the element with
+# the specified tag and a '>' in one of the children after the element and 
+# glues the content 
+def glue_together_broken_placeholders_around_element(parent, element):
+    prefix_elem = None
+    suffix_elem = None
+    elems_to_remove = []
+
+    children = list(parent)
+
+    while children and children[0] is not element:
+        child = children.pop(0)
+        prefix_elem = find_last_partial_placeholder(child)
+
+    if children and prefix_elem != None:
+        elems_to_remove.append(children.pop(0))
+
+        while children and suffix_elem == None:
+            child = children.pop(0)
+            elems_to_remove.append(child)
+            suffix_elem = find_first_partial_placeholder(child)
+
+    if prefix_elem != None and \
+       suffix_elem != None and \
+       prefix_elem.tag == suffix_elem.tag:
+
+        prefix_elem.text = prefix_elem.text + suffix_elem.text
+
+        for elem in elems_to_remove:
+            parent.remove(elem)
+
+# The _GoBack bookmark is a bookmark that Word inserts to know where the
+# cursor/selection was in the last session. It may be in the middle of a
+# placeholder, so that's why we need to remove it.
+def remove_go_back_bookmark(rootelement):
+    for parent_with_bookmark in rootelement.findall('.//*[%s]' % BOOKMARKSTART):
+        bookmark_start = parent_with_bookmark.find("./%s[@{%s}name='_GoBack']" % (BOOKMARKSTART, WORD_NAMESPACE))
+        if bookmark_start != None:
+            bookmark_start_id = bookmark_start.attrib['{%s}id' % WORD_NAMESPACE]
+            bookmark_end = rootelement.find('.//%s[@{%s}id="%s"]' % (BOOKMARKEND, WORD_NAMESPACE, bookmark_start_id))
+
+            glue_together_broken_placeholders_around_element(parent_with_bookmark, bookmark_start)
+            glue_together_broken_placeholders_around_element(parent_with_bookmark, bookmark_end)
+
 def remove_all_table_borders(element):
     for borders in element.findall('.//%s' % TBLBORDERS):
         borders.clear()
@@ -82,6 +156,7 @@ def create_stickies_from_template(template_filename, tasks, stickies_filename):
         ET.register_namespace('w', WORD_NAMESPACE)
         tree = ET.fromstring(xml_content)
         body = tree.find(BODY)
+        remove_go_back_bookmark(body)
         remove_all_table_borders(body)
         page = copy.deepcopy(list(body))
 
