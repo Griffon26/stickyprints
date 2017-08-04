@@ -19,12 +19,12 @@ from tkinter.messagebox import showerror
 #
 ########################################################################
 
-WORD_NAMESPACE = '{http://schemas.openxmlformats.org/wordprocessingml/2006/main}'
-BODY = WORD_NAMESPACE + 'body'
-TBL = WORD_NAMESPACE + 'tbl'
-TBLBORDERS = WORD_NAMESPACE + 'tblBorders'
-#TRBORDERS = WORD_NAMESPACE + 'trBorders'
-TCBORDERS = WORD_NAMESPACE + 'tcBorders'
+WORD_NAMESPACE = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'
+BODY = '{%s}body' % WORD_NAMESPACE
+TBL = '{%s}tbl' % WORD_NAMESPACE
+TBLBORDERS = '{%s}tblBorders' % WORD_NAMESPACE
+#TRBORDERS = '{%s}trBorders' % WORD_NAMESPACE
+TCBORDERS = '{%s}tcBorders' % WORD_NAMESPACE
 
 def read_tasks_from_excel(excel_filename):
     tasks = []
@@ -79,6 +79,7 @@ def create_stickies_from_template(template_filename, tasks, stickies_filename):
 
         nr_of_pages = int((len(tasks) - 1) / 6) + 1
 
+        ET.register_namespace('w', WORD_NAMESPACE)
         tree = ET.fromstring(xml_content)
         body = tree.find(BODY)
         remove_all_table_borders(body)
@@ -99,7 +100,7 @@ def create_stickies_from_template(template_filename, tasks, stickies_filename):
                 task_table_content = replace_placeholders_with_task_data(template_table_content, tasks.pop())
                 table.extend(task_table_content)
 
-        ET.ElementTree(tree).write(docpath)
+        ET.ElementTree(tree).write(docpath, encoding='UTF-8', xml_declaration = True)
 
         make_zipfile_from_dir(tempdir, stickies_filename)
 
@@ -160,6 +161,8 @@ class MyFrame(Frame):
         self.status_label.grid(row = 3, column = 1)
         self.quit_button.grid(row = 3, column = 2)
 
+        self.status_label_default_color = self.status_label.cget('background')
+
         self.config = configparser.ConfigParser()
         self.load_filenames_from_config()
 
@@ -209,7 +212,7 @@ class MyFrame(Frame):
             showerror('Error', 'The specified tasklist file does not exist. Please select a valid tasklist file.')
             return
 
-        self.status_label.config(text = 'Generating...')
+        self.status_label.config(text = 'Generating...', background = self.status_label_default_color)
 
         try:
             self.save_filenames_to_config()
@@ -221,11 +224,11 @@ class MyFrame(Frame):
                 generate_stickies(self.template_entry.get(),
                                   self.tasklist_entry.get(),
                                   filename)
-                self.status_label.config(text = 'The stickies were generated successfully.')
+                self.status_label.config(text = 'The stickies were generated successfully.', background = "#7FFF00")
             else:
-                self.status_label.config(text = 'Cancelled')
+                self.status_label.config(text = 'Cancelled', background = self.status_label_default_color)
         except Exception as e:
-            self.status_label.config(text = 'An exception occurred during generation: %s' % e)
+            self.status_label.config(text = 'An exception occurred during generation: %s' % e, background = "red")
             raise
 
     def on_quit_button_clicked(self):
