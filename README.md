@@ -56,12 +56,13 @@ side towards the printer. Now you can print the generated stickies.docx file.
 This program requires [openpyxl](https://pypi.python.org/pypi/openpyxl).
 
 If you want this script to be runnable from a central location without requiring
-users to install openpyxl, then do something like this:
+users to install openpyxl and its dependencies, then do something like this:
 
-1. Download a release of openpyxl & extract it to a temporary location
-2. Move the openpyxl subdirectory that it contains to the directory that
-   contains stickyprints.py
-3. Remove what remains of openpyxl in the temporary location
+1. Download [openpyxl](https://pypi.python.org/pypi/openpyxl) and extract it somewhere
+2. Move the openpyxl subdirectory that it contains to the directory that contains stickyprints.py
+3. Download [et_xmlfile](https://pypi.python.org/pypi/et_xmlfile) and extract it somewhere
+4. Move the et_xmlfile subdirectory that it contains to the directory that contains stickyprints.py
+5. Download [jdcal](https://pypi.python.org/pypi/jdcal) and extract it somewhere
+6. Move the jdcal.py file that it contains to the directory that contains stickyprints.py
 
 Now you should be able to run stickyprints.py without installing openpyxl
-
