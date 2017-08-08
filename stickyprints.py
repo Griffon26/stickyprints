@@ -35,15 +35,31 @@ from tkinter.messagebox import showerror
 #  Sticky processing code
 #
 ########################################################################
+namespaces = {
+    'm' : "http://schemas.openxmlformats.org/officeDocument/2006/math",
+    'mc' : "http://schemas.openxmlformats.org/markup-compatibility/2006",
+    'o' : "urn:schemas-microsoft-com:office:office",
+    'r' : "http://schemas.openxmlformats.org/officeDocument/2006/relationships",
+    'v' : "urn:schemas-microsoft-com:vml",
+    'w' : "http://schemas.openxmlformats.org/wordprocessingml/2006/main",
+    'w10' : "urn:schemas-microsoft-com:office:word",
+    'w14' : "http://schemas.microsoft.com/office/word/2010/wordml",
+    'wne' : "http://schemas.microsoft.com/office/word/2006/wordml",
+    'wp' : "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing",
+    'wp14' : "http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing",
+    'wpc' : "http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas",
+    'wpg' : "http://schemas.microsoft.com/office/word/2010/wordprocessingGroup",
+    'wpi' : "http://schemas.microsoft.com/office/word/2010/wordprocessingInk",
+    'wps' : "http://schemas.microsoft.com/office/word/2010/wordprocessingShape"
+}
 
-WORD_NAMESPACE = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'
-BODY = '{%s}body' % WORD_NAMESPACE
-TBL = '{%s}tbl' % WORD_NAMESPACE
-TBLBORDERS = '{%s}tblBorders' % WORD_NAMESPACE
-#TRBORDERS = '{%s}trBorders' % WORD_NAMESPACE
-TCBORDERS = '{%s}tcBorders' % WORD_NAMESPACE
-BOOKMARKSTART = '{%s}bookmarkStart' % WORD_NAMESPACE
-BOOKMARKEND = '{%s}bookmarkEnd' % WORD_NAMESPACE
+BODY = '{%s}body' % namespaces['w']
+TBL = '{%s}tbl' % namespaces['w']
+TBLBORDERS = '{%s}tblBorders' % namespaces['w']
+#TRBORDERS = '{%s}trBorders' % namespaces['w']
+TCBORDERS = '{%s}tcBorders' % namespaces['w']
+BOOKMARKSTART = '{%s}bookmarkStart' % namespaces['w']
+BOOKMARKEND = '{%s}bookmarkEnd' % namespaces['w']
 
 def read_tasks_from_excel(excel_filename):
     tasks = []
@@ -148,13 +164,13 @@ def glue_together_broken_placeholders_around_element(parent, element):
 # placeholder, so that's why we need to remove it.
 def remove_go_back_bookmark(rootelement):
     for parent_with_bookmark in rootelement.findall('.//*[%s]' % BOOKMARKSTART):
-        bookmark_start = parent_with_bookmark.find("./%s[@{%s}name='_GoBack']" % (BOOKMARKSTART, WORD_NAMESPACE))
+        bookmark_start = parent_with_bookmark.find("./%s[@{%s}name='_GoBack']" % (BOOKMARKSTART, namespaces['w']))
         if bookmark_start != None:
-            bookmark_start_id = bookmark_start.attrib['{%s}id' % WORD_NAMESPACE]
+            bookmark_start_id = bookmark_start.attrib['{%s}id' % namespaces['w']]
 
             glue_together_broken_placeholders_around_element(parent_with_bookmark, bookmark_start)
 
-            bookmark_end = rootelement.find('.//%s[@{%s}id="%s"]' % (BOOKMARKEND, WORD_NAMESPACE, bookmark_start_id))
+            bookmark_end = rootelement.find('.//%s[@{%s}id="%s"]' % (BOOKMARKEND, namespaces['w'], bookmark_start_id))
             if bookmark_end != None:
                 glue_together_broken_placeholders_around_element(parent_with_bookmark, bookmark_end)
 
@@ -176,7 +192,8 @@ def create_stickies_from_template(template_filename, tasks, stickies_filename):
 
         nr_of_pages = int((len(tasks) - 1) / 6) + 1
 
-        ET.register_namespace('w', WORD_NAMESPACE)
+        for namespace, urn in namespaces.items():
+            ET.register_namespace(namespace, urn)
         tree = ET.fromstring(xml_content)
         body = tree.find(BODY)
         remove_go_back_bookmark(body)
